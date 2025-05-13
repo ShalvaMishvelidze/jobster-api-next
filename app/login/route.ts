@@ -40,7 +40,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const jwt = createJWT({ id: user.id, name: user.name, email: user.email });
+    const jwt = await createJWT({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+    });
 
     return NextResponse.json(
       { message: "User logged in successfully!", token: jwt },

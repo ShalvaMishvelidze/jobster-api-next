@@ -13,7 +13,7 @@ export const isValidPassword = (password: string): boolean => {
       minNumbers: 1,
       minSymbols: 1,
     }) &&
-    password.includes(" ") &&
+    !password.includes(" ") &&
     password.length <= 20
   );
 };
