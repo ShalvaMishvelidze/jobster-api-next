@@ -1,96 +1,37 @@
-import { prisma } from "@/lib/prisma";
-import { comparePassword, createJWT, validateJWT } from "@/utils/helpers";
-import {
-  areValidUserFields,
-  isValidEmail,
-  isValidPassword,
-} from "@/utils/validators";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { createJWT, validateJWT } from "@/utils/helpers";
+import { areValidUserFields, isValidEmail } from "@/utils/validators";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const email = searchParams.get("email");
-  const password = searchParams.get("password");
+  const token = req.headers.get("Authorization")?.split(" ")[1];
 
-  if (!email || !password) {
+  if (!token) {
     return NextResponse.json(
-      { error: "Email and password are required" },
-      { status: 400 }
-    );
-  }
-
-  if (isValidEmail(email)) {
-    return NextResponse.json(
-      { error: "Invalid email format" },
-      { status: 400 }
+      { error: "Authorization token is required" },
+      { status: 401 }
     );
   }
 
   try {
+    const payload = (await validateJWT(token)) as { id: string };
+
     const user = await prisma.user.findUnique({
       where: {
-        email: email,
+        id: payload.id,
       },
     });
 
     if (!user) {
-      return NextResponse.json({ error: "Invalid email!" }, { status: 401 });
+      return NextResponse.json({ message: "User not found!" }, { status: 404 });
     }
 
-    if (!comparePassword(password, user?.password)) {
-      return NextResponse.json(
-        { error: "Invalid password for this email!" },
-        { status: 401 }
-      );
-    }
-
-    const jwt = createJWT({ id: user.id, name: user.name, email: user.email });
-
-    return NextResponse.json(
-      { message: "Success!", token: jwt },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(req: NextRequest) {
-  const { name, email, password } = await req.json();
-
-  if (!name || !email || !password) {
-    return NextResponse.json(
-      { error: "Name, email and password are required" },
-      { status: 400 }
-    );
-  }
-
-  if (isValidEmail(email)) {
-    return NextResponse.json(
-      { error: "Invalid email format" },
-      { status: 400 }
-    );
-  }
-
-  if (isValidPassword(password)) {
-    return NextResponse.json(
-      { error: "Invalid password format" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password,
-      },
-    });
+    const returnUser = {
+      name: user.name,
+      lastName: user.lastName,
+      email: user.email,
+      location: user.location,
+    };
 
     const jwt = await createJWT({
       id: user.id,
@@ -99,8 +40,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(
-      { message: "Success!", token: jwt },
-      { status: 201 }
+      { message: "User fetched successfully!", user: returnUser, token: jwt },
+      { status: 200 }
     );
   } catch (error) {
     console.error(error);
@@ -125,7 +66,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const payload = (await validateJWT(token)) as { id: string };
 
-    if (isValidEmail(email)) {
+    if (!isValidEmail(email)) {
       return NextResponse.json(
         { error: "Invalid email format" },
         { status: 400 }
@@ -162,7 +103,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     return NextResponse.json(
-      { message: "Success!", token: jwt },
+      { message: "User updated successfully!", token: jwt },
       { status: 200 }
     );
   } catch (error) {
@@ -193,7 +134,7 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(null, { status: 204 });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
