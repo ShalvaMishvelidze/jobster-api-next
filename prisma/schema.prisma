@@ -31,11 +31,11 @@ enum JobType {
 // models
 model User {
   id        String   @id @default(cuid())
-  name      String
-  lastName  String?
-  email     String  @unique
-  password  String
-  location  String?
+  name      String   @db.VarChar(50)
+  lastName  String?  @db.VarChar(50)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(72)
+  location  String?  @db.VarChar(255)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   jobs      Job[]
